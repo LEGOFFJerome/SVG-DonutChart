@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <title>3d.v3 Donut</title>
+	<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+</head>
+
+
+<style>
+
+
+
+path.slice{
+	stroke-width:2px;
+}
+
+polyline{
+	opacity: .3;
+	stroke: #939598;
+	stroke-width: 1px;
+	fill: none;
+}
+
+
+
+.toolTip {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    position: absolute;
+    display: none;
+    width: auto;
+    height: auto;
+    background: none repeat scroll 0 0 white;
+    border: 0 none;
+    border-radius: 8px 8px 8px 8px;
+    box-shadow: -3px 3px 15px #888888;
+    color: black;
+    font: 12px sans-serif;
+    padding: 5px;
+    text-align: center;
+}
+text {
+  font: 15px sans-serif;
+  color: #939598;
+  opacity: 0.5;
+}
+.selectOption{
+	padding-left:50px;
+	border-radius:10px;
+	font-family: sans-serif;
+	font-size: 15px;
+	border: none;
+}
+
+
+</style>
+
+<body >
+	<div  style="width:710px;height:600px"> 
+	
+	
+		<div  style="width:700px;height:80px;
+					background-color: #44515C;
+					border-top-right-radius: 1em;
+					border-top-left-radius: 1em;
+					
+					box-shadow: 2px -2px 3px 3px #888;"> 
+			<div style="width:40%;height:100%; float: left" >
+					<span style="color:white;
+							vertical-align: middle;line-height:80px; 
+							padding-left: 30px;
+							font-family: sans-serif;
+							font-size: 22px">
+							Title of the Widget</span>
+			</div>
+			
+			<div style="width:50%;height:100%;float: right;
+						vertical-align: middle;line-height:80px;
+						font-family: sans-serif;
+							font-size: 17px">
+				<label style="color:white;
+							padding-right: 10px;
+							padding-left: 20px">Filter: </label>
+				
+					<select id="dropdown" style="width:150px; height:25px;font-family: sans-serif;
+							padding: 2px 10px 0;
+							font-size: 15px; border-radius:4px;
+							border: none;
+							-webkit-appearance: none;  
+							-moz-appearance: none;  
+							appearance: none;
+							
+							background:white url('dropdownArrow.png') no-repeat;
+							background-size: 13px auto;
+							background-position: 125px 9px
+							">
+							
+							<option class="selectOption" value="0" >Choose Style</option>
+							<option class="selectOption" value="pink" >Pink Style</option>
+							<option class="selectOption" value="blue" >Blue Style</option>
+							<option class="selectOption" value="value" >Show Value</option>
+							<option class="selectOption" value="percentage" >Show Percentage</option>
+
+					</select>
+
+			</div>	
+		</div>
+		
+		
+		<div id="pie"></div>
+	</div>
+</body>
+
+
+ <script>
+
+
+var svg = d3.select("#pie")
+				.append("svg")
+				.attr("width", "700")
+				.attr("height", "500")
+				.attr("style", "border-radius: 15px")
+				.attr("style", "box-shadow: 5px 5px 2.5px #939598")
+				
+				.append("g")
+				.attr("transform", "translate(350,275)");
+/*svg.append("g")
+	.attr("class", "label").append('text')
+		.attr({'text-anchor':'end'})
+		.attr('x', '650')
+		.attr('y', '10')
+		.style({'fill':'#939598', 'font-size':'28px', 'opacity':0.5, 'font': 'sans-serif'})
+		.text(title);
+*/		
+		
+		
+svg.append("g")
+	.attr("class", "slices");
+svg.append("g")
+	.attr("class", "labelName");
+svg.append("g")
+	.attr("class", "lines");
+svg.append("g")
+	.attr("class", "dots");
+
+		
+
+
+var width = 300,
+    height = 300,
+	radius = Math.min(width, height) / 2;
+
+var pie = d3.layout.pie()
+	.sort(null)
+	.value(function(d) {
+		return d.value;
+	});
+
+var arc = d3.svg.arc()
+	.outerRadius(radius * 0.8)
+	.innerRadius(radius * 0.45);
+
+var outerArc = d3.svg.arc()
+	.innerRadius(radius * 1.1)
+	.outerRadius(radius * 1.1);
+
+
+
+
+var dataset = [
+		{label:"P1", value:59}, 
+        {label:"P2", value:5}, 
+        {label:"P3", value:13},
+        {label:"P4", value:17},
+        {label:"P5", value:19},
+        {label:"P6", value:27}
+        ];
+		
+
+
+
+addnew(dataset);
+
+
+$("#dropdown").on("change", function() { change(dataset)});
+
+
+function change(data) {
+
+	var colorBlue = d3.scale.ordinal().range(["#CEEBF0","#8BD3DD", "#00BDCD", "#00ABBE", "#008795", "#006974" ]);
+	var colorPink = d3.scale.ordinal().range(["#f7dee4","#f9ccd7", "#f9bdcc", "#f9acbf", "#f796ae", "#f26386" ]);
+	//var color =  d3.scale.ordinal().range(["#CEEBF0","#8BD3DD", "#00BDCD", "#00ABBE", "#008795", "#006974" ]);
+	var selectValue = d3.select("#dropdown").property("value");
+	
+	//get slices
+	var slice = svg.select(".slices").selectAll("path.slice")
+        .data(pie(data), function(d){ return d.data.label });
+	//get dots at the end of polylines
+	var endpoints = svg.select(".dots").selectAll(".dots")
+					.data(pie(data), function(d){ return d.data.label });	
+	//get all the labels
+	var text = svg.select(".labelName").selectAll("text")
+        .data(pie(data), function(d){ return d.data.label });
+ 
+ 
+	var total = d3.sum(data, function(d) { 
+					return d.value; 
+				});
+				
+	//the logic to change from different filters	
+	switch (selectValue) {
+	
+		case "pink":
+			slice.style("fill", function(d) { return colorPink(d.data.label) });
+			endpoints.style('fill', function(d){return colorPink(d.data.label)});
+			break
+			
+		
+		case "blue":
+			slice.style("fill", function(d) { return colorBlue(d.data.label) });
+			endpoints.style('fill', function(d){return colorBlue(d.data.label)});
+			break;
+			
+			
+		case "value":
+			text.text(function(d) {
+				return d.value;
+			})
+			break;
+			
+			
+		case "percentage":
+			
+			text.text(function(d) {
+				return Math.floor(((d.value/total).toFixed(2))*100)+"%";
+			});
+			break;
+			
+		default:
+			slice.style("fill", function(d) { return colorBlue(d.data.label) });
+			endpoints.style('fill', function(d){return colorBlue(d.data.label)});
+			text.text(function(d) {
+				return Math.floor(((d.value/total).toFixed(2))*100)+"%";
+			});
+	}
+}
+
+function addnew(data) {
+
+
+	/* ------- TOTAL VALUE OF ALL THE SECTORS ---------*/
+		var total = d3.sum(data, function(d) { 
+					return d.value; 
+				});
+				
+				
+	
+	/* ------- GET THE VALUE OF DROPDOWN LIST ---------*/
+				 var selectValue = d3.select("#dropdown").property("value");	
+				 
+	
+	
+
+	
+	/* ------- TITLE OF THE WIDGET ---------*/
+	
+	var title = "Title of the Widget";
+
+	svg.append('text')
+		.attr({'text-anchor':'middle'})
+		.attr("transform", "translate(0,-205)")
+		.style({'fill':'#939598', 'font-size':'25px', 'opacity':0.8, 'font-family': 'sans-serif'})
+		.text(title);
+	
+	/* ------- LABEL ON THE TOP ---------*/
+	/*svg.append('rect')
+		.attr( "transform", "translate(-160,-235)")
+		.attr("width": "300")
+		.attr("height":"60")
+		.style({'fill':'#44515C'})
+	*/
+	
+
+	
+	/* ------- PIE SLICES -------*/
+	var selectValue = d3.select("#dropdown").property("value");
+	
+	colorBlue = ["#CEEBF0","#8BD3DD", "#00BDCD", "#00ABBE", "#008795", "#006974" ];
+	colorPink = ["#f7dee4","#f9ccd7", "#f9bdcc", "#f9acbf", "#f796ae", "#f26386" ];
+	var color =  d3.scale.ordinal().range(["#CEEBF0","#8BD3DD", "#00BDCD", "#00ABBE", "#008795", "#006974" ]);
+	/*if(selectValue == "2"){
+			color = d3.scale.ordinal().range(["#CEEBF0","#8BD3DD", "#00BDCD", "#00ABBE", "#008795", "#006974" ]);
+			}else
+			color = d3.scale.ordinal().range(["#f7dee4","#f9ccd7", "#f9bdcc", "#f9acbf", "#f796ae", "#f26386" ]);
+			}
+	*/			
+				
+	var slice = svg.select(".slices").selectAll("path.slice")
+        .data(pie(data), function(d){ return d.data.label });
+
+    slice.enter()
+        .insert("path")
+        .style("fill", function(d) { return color(d.data.label) })
+				//.style("opacity", 0.7)
+        .attr("class", "slice");
+
+    slice
+        .transition().duration(1000)
+        .attrTween("d", function(d) {
+            this._current = this._current || d;
+            var interpolate = d3.interpolate(this._current, d);
+            this._current = interpolate(0);
+            return function(t) {
+                return arc(interpolate(t));
+            };
+        })
+		
+	slice.exit()
+        .remove();
+		
+		
+	
+	
+	/* --------- LABEL IN THE MIDDLE OF THE DONUT --------- */
+	svg.append('text')
+		.attr({'text-anchor':'middle'})
+		.attr('dy', '0.35em')
+		.style({'fill':'#939598', 'font-size':'18px', 'opacity':0.7, 'font': 'sans-serif'})
+		.text('Total: '+total);
+	
+	
+	
+	/* ------- TEXT LABELS -------*/
+	function midAngle(d){
+        return d.startAngle + (d.endAngle - d.startAngle)/2;
+    }
+
+    var text = svg.select(".labelName").selectAll("text")
+        .data(pie(data), function(d){ return d.data.label })
+		.enter()
+		.append("g");
+		
+	
+			//show the value
+		text
+		.append("text")
+        .attr("dy", ".45em")
+		.attr("color", "#939598")
+		.style("opacity", 0.5)
+        .transition().duration(1000)
+        .attrTween("transform", function(d) {
+
+            this._current = this._current || d;
+            var interpolate = d3.interpolate(this._current, d);
+            this._current = interpolate(0);
+            return function(t) {
+                var d2 = interpolate(t);
+                var pos = outerArc.centroid(d2);
+                pos[0] = 1.25*radius * (midAngle(d2) < Math.PI ? 1 : -1);
+				
+                return "translate(" + pos[0] + "," + (pos[1] +20) + ")";
+            };
+        })
+        .styleTween("text-anchor", function(d){
+            this._current = this._current || d;
+            var interpolate = d3.interpolate(this._current, d);
+            this._current = interpolate(0);
+            return function(t) {
+                var d2 = interpolate(t);
+                return midAngle(d2) < Math.PI ? "start":"end";
+            };
+        })
+        .text(function(d) {
+				
+				//return Math.floor(((d.value/total).toFixed(2))*100)+"%";
+				return Math.floor(((d.value/total).toFixed(2))*100)+"%";
+        })
+		.style("font-size", "15px");
+		
+	
+	
+		//shwo the labal names
+	   text.append("text")
+		.attr("dy", ".35em")
+		.attr("color", "#939598")
+		.style("opacity", 0.5)
+        .transition().duration(1000)
+        .attrTween("transform", function(d) {
+
+            this._current = this._current || d;
+            var interpolate = d3.interpolate(this._current, d);
+            this._current = interpolate(0);
+            return function(t) {
+                var d2 = interpolate(t);
+                var pos = outerArc.centroid(d2);
+                pos[0] = 1.25*radius * (midAngle(d2) < Math.PI ? 1 : -1);
+				
+                return "translate(" + pos[0] + "," + (pos[1]) + ")";
+            };
+        })
+        .styleTween("text-anchor", function(d){
+            this._current = this._current || d;
+            var interpolate = d3.interpolate(this._current, d);
+            this._current = interpolate(0);
+            return function(t) {
+                var d2 = interpolate(t);
+                return midAngle(d2) < Math.PI ? "start":"end";
+            };
+        })
+        .text(function(d) {
+            //return (d.data.label+": "+(Math.floor(((d.value/total).toFixed(2))*100)+"%"));
+			return d.data.label;
+        })
+		.style("font-size", "15px");
+		
+		
+		
+
+		
+		
+
+		
+	
+	
+		
+	/* ------- SLICE TO TEXT POLYLINES -------*/
+	
+	//the outter circle of the donut chart
+	var outterCircle = d3.svg.arc()
+		.outerRadius(radius * 0.8)
+		.innerRadius(radius * 0.8);
+
+    var polyline = svg.select(".lines").selectAll("polyline")
+        .data(pie(data), function(d){ return d.data.label });
+
+    polyline.enter()
+        .append("polyline");
+
+    polyline.transition().duration(1000)
+        .attrTween("points", function(d){
+            this._current = this._current || d;
+            var interpolate = d3.interpolate(this._current, d);
+            this._current = interpolate(0);
+            return function(t) {
+				
+                var d2 = interpolate(t);
+                var pos = outerArc.centroid(d2);
+                pos[0] = radius * 1.15 * (midAngle(d2) < Math.PI ? 1 : -1);
+
+                //return [arc.centroid(d2), outerArc.centroid(d2), pos]; //(polyline points to the middle of the donut)
+				return [outterCircle.centroid(d2),outerArc.centroid(d2), pos];
+            };
+        });
+
+    polyline.exit()
+        .remove();
+
+		
+	/*  -------- draw dots at the end of polylines -------- */
+
+	var endpoints = svg.select(".dots").selectAll(".dots")
+					.data(pie(data), function(d){ return d.data.label });
+		console.log(color.domain());
+		endpoints.enter().append("circle")
+			.attr("class", "dots")
+			.attr('r', 6)
+			.style('fill', function(d){return color(d.data.label)});
+	
+		endpoints.transition().duration(1000)
+		        .attrTween("transform", function (d) {
+		            this._current = this._current || d;
+		            var interpolate = d3.interpolate(this._current, d);
+		            this._current = interpolate(0);
+		            return function (t) {
+
+		                var d2 = interpolate(t);
+		                var pos = outerArc.centroid(d2);
+		                pos[0] = radius * 1.15 * (midAngle(d2) < Math.PI ? 1 : -1);
+		                return "translate(" + pos + ")";
+		            };
+		        });
+
+	        endpoints.exit()
+                .remove();
+				
+   
+};
+
+</script>
+</body>
+</html>
